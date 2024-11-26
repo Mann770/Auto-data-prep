@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Chunking and Formatting</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: linear-gradient(to right, #ff7e5f, #feb47b);
+            color: #333;
+            line-height: 1.6;
+            border: 5px solid #4a90e2;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        h1 {
+            color: #4a90e2;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            resize: vertical;
+            background-color: #ffffff;
+        }
+        select, input[type="number"], button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #ffffff;
+        }
+        button {
+            background-color: #4a90e2;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #357ab8;
+        }
+        #output {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            background-color: #ffffff;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        #chunkSelector, #countSelector {
+            display: none;
+        }
+        .pageButton {
+            background-color: #e0e0e0;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Text Chunking and Formatting</h1>
+
+    <textarea id="inputText" placeholder="Enter your large text here..."></textarea>
+
+    <label for="chunkSize">Chunk Size:</label>
+    <input type="number" id="chunkSize" min="1" value="250">
+
+    <label for="chunkType">Chunk Type:</label>
+    <select id="chunkType">
+        <option value="words">Words</option>
+        <option value="letters">Letters</option>
+        <option value="characters">Characters</option>
+    </select>
+
+    <label for="textColor">Text Color:</label>
+    <input type="color" id="textColor" value="#333333">
+
+    <button onclick="chunkText()">Chunk Text</button>
+
+    <div id="chunkSelector">
+        <label for="chunkNumber">Select Chunk:</label>
+        <select id="chunkNumber" onchange="displayChunk()"></select>
+        <button onclick="formatChunk()">Format Chunk</button>
+        <button onclick="undoChunk()">Undo</button>
+        <div>
+            <button class="pageButton" onclick="changePage(-1)">Previous</button>
+            <button class="pageButton" onclick="changePage(1)">Next</button>
+        </div>
+    </div>
+
+    <div id="countSelector">
+        <label for="countType">Count Type:</label>
+        <select id="countType" onchange="updateCount()">
+            <option value="characters">Characters</option>
+            <option value="letters">Letters</option>
+            <option value="words">Words</option>
+            <option value="tokens">Tokens</option>
+        </select>
+        <p id="countResult"></p>
+    </div>
+
+    <textarea id="output" oninput="updateCount()"></textarea>
+
+    <script>
+        let chunks = [];
+        let currentChunkIndex = 0;
+        let previousChunks = [];
+
+        function chunkText() {
+            const inputText = document.getElementById('inputText').value;
+            const chunkSize = parseInt(document.getElementById('chunkSize').value);
+            const chunkType = document.getElementById('chunkType').value;
+            chunks = [];
+            previousChunks = [];
+
+            if (chunkType === 'words') {
+                const words = inputText.split(/\s+/);
+                for (let i = 0; i < words.length; i += chunkSize) {
+                    chunks.push(words.slice(i, i + chunkSize).join(' '));
+                }
+            } else if (chunkType === 'letters') {
+                for (let i = 0; i < inputText.length; i += chunkSize) {
+                    chunks.push(inputText.slice(i, i + chunkSize));
+                }
+            } else if (chunkType === 'characters') {
+                for (let i = 0; i < inputText.length; i += chunkSize) {
+                    chunks.push(inputText.slice(i, i + chunkSize));
+                }
+            }
+
+            document.getElementById('chunkSelector').style.display = 'block';
+            document.getElementById('countSelector').style.display = 'block';
+            const chunkNumberSelect = document.getElementById('chunkNumber');
+            chunkNumberSelect.innerHTML = '';
+            chunks.forEach((_, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.text = `Chunk ${index + 1}`;
+                chunkNumberSelect.appendChild(option);
+            });
+
+            currentChunkIndex = 0;
+            displayChunk();
+        }
+
+        function displayChunk() {
+            const chunkNumber = parseInt(document.getElementById('chunkNumber').value);
+            currentChunkIndex = chunkNumber;
+            document.getElementById('output').value = chunks[chunkNumber];
+            document.getElementById('output').style.color = document.getElementById('textColor').value;
+            updateCount();
+        }
+
+        function formatChunk() {
+            const chunkNumber = currentChunkIndex;
+            let formattedChunk = chunks[chunkNumber];
+
+            formattedChunk = formattedChunk.replace(/[0-9]/g, '');
+            formattedChunk = formattedChunk.replace(/([.,])/g, '$1\n');
+
+            document.getElementById('output').value = formattedChunk;
+            updateCount();
+        }
+
+        function undoChunk() {
+            if (previousChunks.length > 0) {
+                const lastChunk = previousChunks.pop();
+                chunks[currentChunkIndex] = lastChunk;
+                displayChunk();
+            }
+        }
+
+        function changePage(direction) {
+            const chunkNumberSelect = document.getElementById('chunkNumber');
+            const newIndex = currentChunkIndex + direction;
+
+            if (newIndex >= 0 && newIndex < chunks.length) {
+                previousChunks.push(chunks[currentChunkIndex]);
+                chunkNumberSelect.value = newIndex;
+                displayChunk();
+            }
+        }
+
+        function updateCount() {
+            const text = document.getElementById('output').value;
+            const countType = document.getElementById('countType').value;
+            let count = 0;
+
+            switch (countType) {
+                case 'characters':
+                    count = text.length;
+                    break;
+                case 'letters':
+                    count = (text.match(/[a-zA-Z]/g) || []).length;
+                    break;
+                case 'words':
+                    count = text.trim().split(/\s+/).length;
+                    break;
+                case 'tokens':
+                    count = text.trim().split(/\s+/).length; // Simple token count (same as words)
+                    break;
+            }
+
+            document.getElementById('countResult').textContent = `${countType.charAt(0).toUpperCase() + countType.slice(1)} count: ${count}`;
+        }
+    </script>
+
+</body>
+</html>
